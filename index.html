@@ -551,35 +551,72 @@ function renderTrack(M){
 /* ============================================================
    7. BOOT
    ============================================================ */
-async function fetchCsv(url){
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return toObjects(parseCSV(await res.text()));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* Google throttles the published-CSV endpoint and answers with 409 when it
+   does. Retry a few times with growing gaps before giving up. Note we do NOT
+   cache-bust: letting the browser reuse a recent copy is what keeps us under
+   the limit in the first place. */
+async function fetchCsv(url, attempts = 4){
+  let last;
+  for (let i = 0; i < attempts; i++){
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return toObjects(parseCSV(await res.text()));
+    } catch (err){
+      last = err;
+      if (i < attempts - 1) await sleep(600 * 2**i + Math.random()*400);
+    }
+  }
+  throw last;
 }
 
-function banner(html, kind){
+const CACHE_KEY = "maptap-cache-v1";
+const saveCache = (scores, locations) => {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({t:Date.now(), scores, locations})); } catch(e){}
+};
+const loadCache = () => {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch(e){ return null; }
+};
+
+function banner(html){
   document.getElementById("banner").innerHTML = `<div class="banner">${html}</div>`;
 }
 
 (async function(){
-  let scores, locations, isDemo = false;
+  let scores = [], locations = [];
   const configured = CONFIG.scoresCsvUrl && CONFIG.locationsCsvUrl;
-  if (configured){
-    try {
-      [scores, locations] = await Promise.all([fetchCsv(CONFIG.scoresCsvUrl), fetchCsv(CONFIG.locationsCsvUrl)]);
-    } catch (err){
-      const d = demoData(); scores = d.scores; locations = d.locations; isDemo = true;
-      banner(`<b>Couldn't load the sheet</b> (${err.message}). Check that both tabs are published to the web as CSV, and that you're viewing this page over http rather than opening the file directly. Showing sample data below.`);
-    }
+
+  if (!configured){
+    const d = demoData(); scores = d.scores; locations = d.locations;
+    banner(`<b>Sample data — these are not real scores.</b> Paste your two published CSV links into <code>CONFIG</code> at the top of the script.`);
   } else {
-    const d = demoData(); scores = d.scores; locations = d.locations; isDemo = true;
-    banner(`<b>Sample data.</b> Open this file and paste your two published CSV links into <code>CONFIG</code> at the top of the script to switch to real scores.`);
+    try {
+      /* Sequential, not parallel: two simultaneous requests count double
+         against the rate limit and are the fastest way to trip it. */
+      scores = await fetchCsv(CONFIG.scoresCsvUrl);
+      await sleep(250);
+      locations = await fetchCsv(CONFIG.locationsCsvUrl);
+      saveCache(scores, locations);
+    } catch (err){
+      const cached = loadCache();
+      if (cached){
+        scores = cached.scores; locations = cached.locations;
+        banner(`<b>Showing saved data from ${new Date(cached.t).toLocaleString()}.</b>
+                Google is rate-limiting the sheet right now (${err.message}). Reload in a minute or two.`);
+      } else {
+        banner(`<b>Couldn't load the sheet (${err.message}).</b>
+                Google rate-limits the published CSV when several people load the page at once. Wait a minute and reload.
+                If it never loads, check that both tabs are still published to the web as CSV.`);
+      }
+    }
   }
   const M = buildModel(scores, locations);
   assignColors(M.players);
   renderMeta(M); renderStandings(M); renderToday(M); renderHeat(M); renderTrack(M);
   const unmapped = M.regions.find(r => r.region === "Unmapped");
-  if (unmapped && !isDemo){
+  if (unmapped && configured){
     document.getElementById("banner").insertAdjacentHTML("beforeend",
       `<div class="banner"><b>${unmapped.n} locations aren't mapped to a region.</b> Check the country spellings in your locations sheet, add the country to <code>REGION_MEMBERS</code>, or fill in the <code>region</code> column directly.</div>`);
   }

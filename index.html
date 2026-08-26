@@ -617,8 +617,18 @@ function banner(html){
   renderMeta(M); renderStandings(M); renderToday(M); renderHeat(M); renderTrack(M);
   const unmapped = M.regions.find(r => r.region === "Unmapped");
   if (unmapped && configured){
+    const names = [...new Set(
+      locations
+        .filter(r => !(r.region||"").trim() && regionFor(r.country) === "Unmapped")
+        .map(r => (r.country||"").trim())
+        .filter(Boolean)
+    )].sort();
     document.getElementById("banner").insertAdjacentHTML("beforeend",
-      `<div class="banner"><b>${unmapped.n} locations aren't mapped to a region.</b> Check the country spellings in your locations sheet, add the country to <code>REGION_MEMBERS</code>, or fill in the <code>region</code> column directly.</div>`);
+      `<div class="banner"><b>${unmapped.n} locations aren't mapped to a region.</b>
+        Unrecognised ${names.length === 1 ? "country" : "countries"}:
+        <code>${names.join("</code>, <code>") || "(blank)"}</code>.
+        Fix the spelling in your locations sheet, or just type the region straight into the
+        <code>region</code> column for those rows.</div>`);
   }
 })();
 </script>

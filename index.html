@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maptap — Sounding Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chart:#EDF2F0;      /* chart paper */
+  --paper:#F7FAF8;      /* raised panels */
+  --abyss:#0A2239;      /* ink */
+  --ink-2:#3F5566;      /* secondary ink */
+  --grid:#C6D3CE;       /* hairline */
+  --shoal:#2E7D72;      /* shallow teal, positive */
+  --buoy:#A83258;       /* chart magenta, negative */
+  --sand:#DCC79A;       /* sand tint */
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--chart);
+  color:var(--abyss);
+  font-family:"IBM Plex Sans Condensed",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px 72px}
+
+/* ---------- masthead ---------- */
+.masthead{
+  position:relative;overflow:hidden;
+  border-bottom:1.5px solid var(--abyss);
+  margin-bottom:28px;padding:34px 0 22px;
+}
+.masthead::before{
+  content:"";position:absolute;inset:0;opacity:.16;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='120' viewBox='0 0 240 120'><g fill='none' stroke='%232E7D72' stroke-width='1'><path d='M-10 20 C 40 4, 80 40, 130 24 S 220 6, 260 26'/><path d='M-10 42 C 40 26, 80 62, 130 46 S 220 28, 260 48'/><path d='M-10 64 C 40 48, 80 84, 130 68 S 220 50, 260 70'/><path d='M-10 86 C 40 70, 80 106, 130 90 S 220 72, 260 92'/><path d='M-10 108 C 40 92, 80 128, 130 112 S 220 94, 260 114'/></g></svg>");
+}
+.mast-inner{position:relative;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between}
+.eyebrow{
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-2);font-weight:600;
+}
+h1{
+  font-family:"EB Garamond",Georgia,serif;font-style:italic;font-weight:500;
+  font-size:clamp(44px,9vw,76px);line-height:.9;margin:6px 0 0;letter-spacing:-.01em;
+}
+.mast-meta{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-2);
+  text-align:right;line-height:1.7;
+}
+.mast-meta b{color:var(--abyss);font-weight:600}
+
+/* ---------- sections ---------- */
+section{margin-top:44px}
+.sec-head{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--grid);padding-bottom:7px;margin-bottom:16px}
+.sec-head h2{
+  font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin:0;
+}
+.sec-head .note{font-size:12.5px;color:var(--ink-2);margin-left:auto;text-align:right}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{
+  font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:600;text-align:right;padding:0 10px 8px;white-space:nowrap;
+}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+td{padding:9px 10px;border-top:1px solid var(--grid);text-align:right;white-space:nowrap}
+tbody tr:hover{background:var(--paper)}
+.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13.5px}
+.name{font-family:"EB Garamond",Georgia,serif;font-style:italic;font-size:19px;font-weight:500}
+.rank{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-2);width:26px}
+.muted{color:var(--ink-2)}
+
+/* ---------- today ---------- */
+.soundings{display:grid;gap:1px;background:var(--grid);border:1px solid var(--grid)}
+.sounding{background:var(--paper);padding:13px 15px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:baseline}
+.sounding .place{font-family:"EB Garamond",Georgia,serif;font-style:italic;font-size:21px;line-height:1.15}
+.sounding .country{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.sounding .round{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-2);letter-spacing:.1em}
+.dots{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.dot{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-variant-numeric:tabular-nums;
+  padding:2px 7px;border-radius:2px;border:1px solid var(--grid);background:#fff;
+}
+.dot i{font-style:normal;color:var(--ink-2);margin-right:5px}
+.dot.best{border-color:var(--shoal);background:rgba(46,125,114,.1)}
+
+/* ---------- heat grid ---------- */
+.heat td.cell{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:13px;font-variant-numeric:tabular-nums;padding:8px 6px}
+.heat th.region{text-align:left;padding-left:0}
+.heat .rlabel{font-family:"EB Garamond",Georgia,serif;font-style:italic;font-size:17px}
+.heat .n{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-2)}
+.legend{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-2);margin-top:12px;flex-wrap:wrap}
+.ramp{display:flex;height:9px;width:150px;border:1px solid var(--grid)}
+.ramp span{flex:1}
+
+/* ---------- chart ---------- */
+.chartbox{background:var(--paper);border:1px solid var(--grid);padding:14px 8px 6px}
+svg.track{display:block;width:100%;height:auto}
+.keys{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:13px}
+.key{display:flex;align-items:center;gap:6px}
+.key i{width:14px;height:3px;display:inline-block;border-radius:2px}
+
+/* ---------- setup / states ---------- */
+.banner{
+  border:1px solid var(--sand);background:rgba(220,199,154,.22);
+  padding:14px 16px;font-size:14px;margin-top:22px;
+}
+.banner b{font-weight:600}
+.banner code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:#fff;padding:1px 5px;border:1px solid var(--grid)}
+.empty{color:var(--ink-2);font-size:14px;padding:14px 0}
+footer{margin-top:56px;padding-top:14px;border-top:1px solid var(--grid);font-size:11.5px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace}
+
+@media (max-width:620px){
+  .mast-meta{text-align:left}
+  .sec-head .note{margin-left:0;width:100%;text-align:left}
+  .sec-head{flex-wrap:wrap}
+}
+a{color:var(--shoal)}
+:focus-visible{outline:2px solid var(--shoal);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){
+  .sounding,tbody tr{transition:background .15s ease}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="mast-inner">
+    <div>
+      <div class="eyebrow">Daily sounding log</div>
+      <h1>Maptap</h1>
+    </div>
+    <div class="mast-meta" id="mastMeta"></div>
+  </div>
+</header>
+
+<div id="banner"></div>
+
+<section id="secStandings">
+  <div class="sec-head">
+    <h2>Standings</h2>
+    <div class="note">Victory = top final score that day. Ties count for everyone.</div>
+  </div>
+  <div class="scroll"><table id="standings"></table></div>
+</section>
+
+<section id="secToday">
+  <div class="sec-head">
+    <h2>Latest round</h2>
+    <div class="note" id="todayNote"></div>
+  </div>
+  <div class="soundings" id="today"></div>
+</section>
+
+<section id="secHeat">
+  <div class="sec-head">
+    <h2>Regional soundings</h2>
+    <div class="note">Average per-location score. Shading is each player's deviation from the group average in that region.</div>
+  </div>
+  <div class="scroll"><table class="heat" id="heat"></table></div>
+  <div class="legend">
+    <span>Below group</span>
+    <div class="ramp" id="ramp"></div>
+    <span>Above group</span>
+  </div>
+</section>
+
+<section id="secTrack">
+  <div class="sec-head">
+    <h2>Daily track</h2>
+    <div class="note">Final scores over time.</div>
+  </div>
+  <div class="chartbox"><svg class="track" id="track" viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Final scores by date"></svg></div>
+  <div class="keys" id="keys"></div>
+</section>
+
+<footer id="foot"></footer>
+</div>
+
+<script>
+/* ============================================================
+   1. CONFIGURATION — paste your two published CSV links here
+   ============================================================ */
+const CONFIG = {
+  scoresCsvUrl:    "",   // the "scores" tab, published as CSV
+  locationsCsvUrl: ""    // the "locations" tab, published as CSV
+};
+
+/* Player line colours, in order of first appearance. */
+const PLAYER_COLORS = ["#0072B2","#D55E00","#009E73","#CC79A7","#8C6D1F","#56B4E9","#6A4C93"];
+
+/* ============================================================
+   2. COUNTRY -> REGION LOOKUP
+   Add or edit freely. You can also override per-row with a
+   "region" column in the locations sheet.
+   ============================================================ */
+const REGION_MEMBERS = {
+  "North America":["united states","usa","canada","mexico","greenland","bermuda"],
+  "Central America & Caribbean":["guatemala","belize","honduras","el salvador","nicaragua","costa rica","panama","cuba","jamaica","haiti","dominican republic","puerto rico","bahamas","trinidad and tobago","barbados","saint lucia","grenada","antigua and barbuda","dominica","saint kitts and nevis","saint vincent and the grenadines","aruba","curacao","martinique","guadeloupe"],
+  "South America":["brazil","argentina","chile","peru","colombia","venezuela","ecuador","bolivia","paraguay","uruguay","guyana","suriname","french guiana","falkland islands"],
+  "Northern Europe":["united kingdom","ireland","iceland","norway","sweden","finland","denmark","estonia","latvia","lithuania","faroe islands"],
+  "Western Europe":["france","germany","netherlands","belgium","luxembourg","switzerland","austria","liechtenstein","monaco"],
+  "Southern Europe":["spain","portugal","italy","greece","malta","cyprus","san marino","vatican city","andorra","slovenia","croatia","bosnia and herzegovina","serbia","montenegro","north macedonia","albania","kosovo"],
+  "Eastern Europe":["poland","czechia","czech republic","slovakia","hungary","romania","bulgaria","ukraine","belarus","moldova","russia"],
+  "Middle East & North Africa":["turkey","syria","lebanon","israel","palestine","jordan","iraq","iran","saudi arabia","yemen","oman","united arab emirates","qatar","bahrain","kuwait","egypt","libya","tunisia","algeria","morocco","western sahara"],
+  "Sub-Saharan Africa":["nigeria","ghana","senegal","mali","burkina faso","niger","chad","sudan","south sudan","ethiopia","eritrea","djibouti","somalia","kenya","uganda","tanzania","rwanda","burundi","democratic republic of the congo","republic of the congo","congo","cameroon","central african republic","gabon","equatorial guinea","angola","zambia","zimbabwe","malawi","mozambique","botswana","namibia","south africa","lesotho","eswatini","madagascar","mauritius","seychelles","comoros","cape verde","guinea","guinea-bissau","sierra leone","liberia","ivory coast","cote d ivoire","togo","benin","gambia","mauritania","sao tome and principe"],
+  "Central & South Asia":["kazakhstan","uzbekistan","turkmenistan","kyrgyzstan","tajikistan","afghanistan","pakistan","india","nepal","bhutan","bangladesh","sri lanka","maldives","armenia","georgia","azerbaijan"],
+  "East Asia":["china","japan","south korea","north korea","mongolia","taiwan","hong kong","macau"],
+  "Southeast Asia":["thailand","vietnam","cambodia","laos","myanmar","burma","malaysia","singapore","indonesia","philippines","brunei","timor-leste","east timor"],
+  "Oceania":["australia","new zealand","papua new guinea","fiji","solomon islands","vanuatu","samoa","tonga","kiribati","tuvalu","nauru","palau","micronesia","marshall islands","new caledonia","french polynesia","guam"],
+  "Antarctic & Southern Ocean":["antarctica","south georgia and the south sandwich islands"]
+};
+const COUNTRY_TO_REGION = (() => {
+  const m = {};
+  for (const [region, list] of Object.entries(REGION_MEMBERS)) list.forEach(c => m[c] = region);
+  return m;
+})();
+const COUNTRY_ALIASES = {
+  "us":"united states","u s a":"united states","america":"united states","united states of america":"united states",
+  "uk":"united kingdom","great britain":"united kingdom","england":"united kingdom","scotland":"united kingdom","wales":"united kingdom","northern ireland":"united kingdom",
+  "uae":"united arab emirates","drc":"democratic republic of the congo","dr congo":"democratic republic of the congo",
+  "south korea":"south korea","korea":"south korea","republic of korea":"south korea","holland":"netherlands",
+  "russian federation":"russia","the gambia":"gambia","the bahamas":"bahamas","ivory coast":"ivory coast","cote d'ivoire":"ivory coast"
+};
+
+/* ============================================================
+   3. HELPERS
+   ============================================================ */
+const slug = s => (s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+
+function regionFor(country){
+  let k = slug(country);
+  if (!k) return "Unmapped";
+  if (COUNTRY_ALIASES[k]) k = slug(COUNTRY_ALIASES[k]);
+  return COUNTRY_TO_REGION[k] || "Unmapped";
+}
+
+function parseCSV(text){
+  const rows=[]; let row=[], field="", inQ=false;
+  text = text.replace(/\r\n?/g,"\n");
+  for (let i=0;i<text.length;i++){
+    const c = text[i];
+    if (inQ){
+      if (c === '"'){ if (text[i+1] === '"'){ field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ","){ row.push(field); field=""; }
+      else if (c === "\n"){ row.push(field); rows.push(row); row=[]; field=""; }
+      else field += c;
+    }
+  }
+  if (field !== "" || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ""));
+}
+
+function toObjects(rows){
+  if (!rows.length) return [];
+  const head = rows[0].map(h => slug(h).replace(/ /g,"_"));
+  return rows.slice(1).map(r => {
+    const o = {};
+    head.forEach((h,i) => o[h] = (r[i] ?? "").trim());
+    return o;
+  });
+}
+
+function normDate(v){
+  if (!v) return "";
+  const s = v.trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);            // M/D/YYYY
+  if (m) return `${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  const d = new Date(s);
+  if (!isNaN(d)) return d.toISOString().slice(0,10);
+  return s;
+}
+
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n) ? null : n; };
+const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+const fmt  = (n,d=1) => n === null || n === undefined ? "—" : n.toFixed(d);
+const prettyDate = iso => {
+  const d = new Date(iso + "T12:00:00");
+  return isNaN(d) ? iso : d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+};
+
+/* ============================================================
+   4. DEMO DATA (used until the CSV links are filled in)
+   ============================================================ */
+function demoData(){
+  const players = ["Colter","Nadia","Ben","Priya","Marcus"];
+  const pool = [
+    ["Reykjavik","Iceland"],["Osaka","Japan"],["Asuncion","Paraguay"],["Windhoek","Namibia"],["Tbilisi","Georgia"],
+    ["Perth","Australia"],["Marrakesh","Morocco"],["Gdansk","Poland"],["Medellin","Colombia"],["Chiang Mai","Thailand"],
+    ["Halifax","Canada"],["Palermo","Italy"],["Dakar","Senegal"],["Almaty","Kazakhstan"],["Bergen","Norway"],
+    ["Kaohsiung","Taiwan"],["Antigua","Guatemala"],["Bristol","United Kingdom"],["Ulaanbaatar","Mongolia"],["Valparaiso","Chile"],
+    ["Nantes","France"],["Kochi","India"],["Salvador","Brazil"],["Dunedin","New Zealand"],["Split","Croatia"],
+    ["Kigali","Rwanda"],["Cebu","Philippines"],["Tampere","Finland"],["Puebla","Mexico"],["Aqaba","Jordan"]
+  ];
+  const bias = { // per-player regional tendency, purely for the demo
+    Colter:{"Northern Europe":6,"East Asia":-5},Nadia:{"South America":7,"Oceania":-4},
+    Ben:{"Sub-Saharan Africa":6,"Southern Europe":-3},Priya:{"Central & South Asia":8,"North America":-4},
+    Marcus:{"Southeast Asia":6,"Eastern Europe":-5}
+  };
+  const scores=[], locations=[];
+  const start = new Date(); start.setDate(start.getDate()-13);
+  for (let d=0; d<14; d++){
+    const day = new Date(start); day.setDate(start.getDate()+d);
+    const date = day.toISOString().slice(0,10);
+    const picks = [];
+    for (let r=0;r<5;r++) picks.push(pool[(d*5+r) % pool.length]);
+    picks.forEach((p,i)=> locations.push({date, round:String(i+1), city:p[0], country:p[1], region:""}));
+    players.forEach(pl=>{
+      const rs = picks.map(p=>{
+        const b = (bias[pl]||{})[regionFor(p[1])] || 0;
+        return Math.max(12, Math.min(100, Math.round(84 + b + (Math.sin(d*7.3 + pl.length*2.1 + p[0].length)*13))));
+      });
+      const bonus = Math.round(rs.reduce((a,b)=>a+b,0) * (0.85 + (Math.sin(d*3.1+pl.length)*0.12)));
+      const row = {date, player:pl, final:String(rs.reduce((a,b)=>a+b,0) + bonus)};
+      rs.forEach((v,i)=> row["r"+(i+1)] = String(v));
+      scores.push(row);
+    });
+  }
+  return {scores, locations};
+}
+
+/* ============================================================
+   5. MODEL
+   ============================================================ */
+function buildModel(scoreRows, locRows){
+  const locs = {};   // date -> [{round, city, country, region}]
+  locRows.forEach(r=>{
+    const date = normDate(r.date); if (!date) return;
+    const round = num(r.round) || (locs[date] ? locs[date].length+1 : 1);
+    (locs[date] = locs[date] || []).push({
+      round, city:r.city||"", country:r.country||"",
+      region: r.region && r.region.trim() ? r.region.trim() : regionFor(r.country)
+    });
+  });
+  Object.values(locs).forEach(a => a.sort((x,y)=>x.round-y.round));
+
+  const days = {};   // date -> {date, entries:[{player, rounds[], final}]}
+  const players = [];
+  scoreRows.forEach(r=>{
+    const date = normDate(r.date); const player = (r.player||"").trim();
+    if (!date || !player) return;
+    if (!players.includes(player)) players.push(player);
+    const rounds = [1,2,3,4,5].map(i => num(r["r"+i]));
+    const final = num(r.final ?? r.final_score ?? r.total);
+    (days[date] = days[date] || {date, entries:[]}).entries.push({player, rounds, final});
+  });
+
+  const dates = Object.keys(days).sort();
+  dates.forEach(d=>{
+    const withFinal = days[d].entries.filter(e => e.final !== null);
+    const top = withFinal.length ? Math.max(...withFinal.map(e=>e.final)) : null;
+    days[d].top = top;
+    days[d].entries.forEach(e => e.won = top !== null && e.final === top);
+    days[d].locations = locs[d] || [];
+  });
+
+  // per-player aggregates
+  const stats = players.map(p=>{
+    const rows = dates.map(d => days[d].entries.find(e=>e.player===p)).filter(Boolean);
+    const finals = rows.map(r=>r.final).filter(v=>v!==null);
+    const locScores = rows.flatMap(r=>r.rounds).filter(v=>v!==null);
+    return {
+      player:p, days:rows.length,
+      wins: rows.filter(r=>r.won).length,
+      avgFinal: mean(finals), bestFinal: finals.length ? Math.max(...finals) : null,
+      avgLoc: mean(locScores)
+    };
+  });
+
+  // player x region
+  const byRegion = {};  // region -> {player -> [scores]}
+  dates.forEach(d=>{
+    const L = days[d].locations; if (!L.length) return;
+    days[d].entries.forEach(e=>{
+      e.rounds.forEach((v,i)=>{
+        const loc = L[i]; if (v===null || !loc) return;
+        const R = loc.region;
+        byRegion[R] = byRegion[R] || {};
+        (byRegion[R][e.player] = byRegion[R][e.player] || []).push(v);
+      });
+    });
+  });
+  const regions = Object.entries(byRegion).map(([region, byP])=>{
+    const all = Object.values(byP).flat();
+    return {
+      region, n: all.length, groupAvg: mean(all),
+      perPlayer: Object.fromEntries(players.map(p => [p, {avg: mean(byP[p]||[]), n:(byP[p]||[]).length}]))
+    };
+  }).sort((a,b)=> (b.groupAvg??0) - (a.groupAvg??0));
+
+  return {players, dates, days, stats, regions};
+}
+
+/* ============================================================
+   6. RENDERING
+   ============================================================ */
+const colorOf = {};
+function assignColors(players){ players.forEach((p,i)=> colorOf[p] = PLAYER_COLORS[i % PLAYER_COLORS.length]); }
+
+function mix(hex, t){ // t 0..1 toward white
+  const n = parseInt(hex.slice(1),16), r=n>>16, g=(n>>8)&255, b=n&255;
+  const f = c => Math.round(c + (255-c)*t);
+  return `rgb(${f(r)},${f(g)},${f(b)})`;
+}
+function heatColor(delta){
+  if (delta === null || delta === undefined) return "transparent";
+  const k = Math.max(-1, Math.min(1, delta/8));
+  if (k >= 0) return mix("#2E7D72", 1 - Math.abs(k)*0.78);
+  return mix("#A83258", 1 - Math.abs(k)*0.78);
+}
+
+function renderMeta(M){
+  const last = M.dates[M.dates.length-1];
+  document.getElementById("mastMeta").innerHTML =
+    `<div><b>${M.dates.length}</b> days logged</div>
+     <div><b>${M.players.length}</b> players</div>
+     <div>latest &nbsp;<b>${last ? prettyDate(last) : "—"}</b></div>`;
+  document.getElementById("foot").textContent =
+    `Sounding log compiled ${new Date().toLocaleString()} · scores per location out of 100 · final score includes in-game bonuses`;
+}
+
+function renderStandings(M){
+  const rows = [...M.stats].sort((a,b)=> b.wins - a.wins || (b.avgFinal??0) - (a.avgFinal??0));
+  document.getElementById("standings").innerHTML = `
+    <thead><tr>
+      <th>Player</th><th>Victories</th><th>Avg final</th><th>Avg location</th><th>Best day</th><th>Days</th>
+    </tr></thead>
+    <tbody>${rows.map((s,i)=>`
+      <tr>
+        <td><span class="rank">${String(i+1).padStart(2,"0")}</span> <span class="name" style="color:${colorOf[s.player]}">${s.player}</span></td>
+        <td class="num">${s.wins}</td>
+        <td class="num">${fmt(s.avgFinal,0)}</td>
+        <td class="num">${fmt(s.avgLoc,1)}</td>
+        <td class="num">${s.bestFinal ?? "—"}</td>
+        <td class="num muted">${s.days}</td>
+      </tr>`).join("")}
+    </tbody>`;
+}
+
+function renderToday(M){
+  const date = M.dates[M.dates.length-1];
+  const box = document.getElementById("today");
+  if (!date){ box.innerHTML = `<div class="empty" style="padding:16px">No days logged yet.</div>`; return; }
+  const day = M.days[date];
+  document.getElementById("todayNote").textContent = prettyDate(date);
+  if (!day.locations.length){
+    box.innerHTML = `<div class="empty" style="padding:16px">Scores are in for ${prettyDate(date)}, but the five locations haven't been added to the locations sheet yet.</div>`;
+    return;
+  }
+  box.innerHTML = day.locations.map((loc,i)=>{
+    const vals = day.entries.map(e=>({player:e.player, v:e.rounds[i]})).filter(x=>x.v!==null);
+    const best = vals.length ? Math.max(...vals.map(x=>x.v)) : null;
+    return `<div class="sounding">
+      <div>
+        <div class="place">${loc.city || "—"}</div>
+        <div class="country">${loc.country} · ${loc.region}</div>
+      </div>
+      <div class="round">R${loc.round}</div>
+      <div class="dots">${vals.map(x=>`
+        <span class="dot ${x.v===best?"best":""}"><i>${x.player}</i>${x.v}</span>`).join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderHeat(M){
+  const el = document.getElementById("heat");
+  const regions = M.regions.filter(r => r.n >= 1);
+  if (!regions.length){ el.innerHTML = `<tbody><tr><td class="empty">Add locations to the locations sheet to unlock regional breakdowns.</td></tr></tbody>`; return; }
+  el.innerHTML = `
+    <thead><tr>
+      <th class="region">Region</th>
+      <th>Group</th>
+      ${M.players.map(p=>`<th style="color:${colorOf[p]}">${p}</th>`).join("")}
+    </tr></thead>
+    <tbody>${regions.map(r=>`
+      <tr>
+        <td class="region"><span class="rlabel">${r.region}</span> <span class="n">n=${r.n}</span></td>
+        <td class="num"><b>${fmt(r.groupAvg,1)}</b></td>
+        ${M.players.map(p=>{
+          const c = r.perPlayer[p];
+          if (!c || c.avg === null) return `<td class="cell muted">·</td>`;
+          const delta = c.avg - r.groupAvg;
+          return `<td class="cell" style="background:${heatColor(delta)}"
+                   title="${p} · ${r.region} · ${fmt(c.avg,1)} over ${c.n} locations (${delta>=0?"+":""}${fmt(delta,1)} vs group)">${fmt(c.avg,1)}</td>`;
+        }).join("")}
+      </tr>`).join("")}
+    </tbody>`;
+  document.getElementById("ramp").innerHTML =
+    [-8,-5,-2.5,0,2.5,5,8].map(d=>`<span style="background:${heatColor(d)}"></span>`).join("");
+}
+
+function renderTrack(M){
+  const svg = document.getElementById("track");
+  const W=900, H=300, L=54, R=16, T=14, B=34;
+  const dates = M.dates;
+  const series = M.players.map(p=>({
+    player:p,
+    pts: dates.map((d,i)=>{
+      const e = M.days[d].entries.find(x=>x.player===p);
+      return (e && e.final !== null) ? {i, v:e.final} : null;
+    }).filter(Boolean)
+  })).filter(s=>s.pts.length);
+
+  if (!series.length || dates.length < 2){
+    svg.innerHTML = `<text x="20" y="40" fill="#3F5566" font-size="14" font-family="IBM Plex Sans Condensed">Not enough days logged yet to draw a track.</text>`;
+    document.getElementById("keys").innerHTML = "";
+    return;
+  }
+  const all = series.flatMap(s=>s.pts.map(p=>p.v));
+  const lo = Math.floor(Math.min(...all)/50)*50, hi = Math.ceil(Math.max(...all)/50)*50;
+  const x = i => L + (dates.length === 1 ? 0 : i*(W-L-R)/(dates.length-1));
+  const y = v => T + (hi === lo ? 0 : (hi-v)*(H-T-B)/(hi-lo));
+
+  let g = "";
+  const ticks = 4;
+  for (let t=0;t<=ticks;t++){
+    const v = lo + (hi-lo)*t/ticks;
+    g += `<line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="#C6D3CE" stroke-width="1"/>
+          <text x="${L-9}" y="${y(v)+4}" text-anchor="end" fill="#3F5566" font-size="11" font-family="IBM Plex Mono">${Math.round(v)}</text>`;
+  }
+  const step = Math.max(1, Math.ceil(dates.length/7));
+  dates.forEach((d,i)=>{
+    if (i % step && i !== dates.length-1) return;
+    g += `<text x="${x(i)}" y="${H-12}" text-anchor="middle" fill="#3F5566" font-size="10.5" font-family="IBM Plex Mono">${d.slice(5).replace("-","/")}</text>`;
+  });
+  series.forEach(s=>{
+    const c = colorOf[s.player];
+    g += `<polyline fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+            points="${s.pts.map(p=>`${x(p.i)},${y(p.v)}`).join(" ")}"/>`;
+    g += s.pts.map(p=>`<circle cx="${x(p.i)}" cy="${y(p.v)}" r="2.6" fill="#F7FAF8" stroke="${c}" stroke-width="1.8"/>`).join("");
+  });
+  svg.innerHTML = g;
+  document.getElementById("keys").innerHTML = series.map(s=>
+    `<span class="key"><i style="background:${colorOf[s.player]}"></i>${s.player}</span>`).join("");
+}
+
+/* ============================================================
+   7. BOOT
+   ============================================================ */
+async function fetchCsv(url){
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return toObjects(parseCSV(await res.text()));
+}
+
+function banner(html, kind){
+  document.getElementById("banner").innerHTML = `<div class="banner">${html}</div>`;
+}
+
+(async function(){
+  let scores, locations, isDemo = false;
+  const configured = CONFIG.scoresCsvUrl && CONFIG.locationsCsvUrl;
+  if (configured){
+    try {
+      [scores, locations] = await Promise.all([fetchCsv(CONFIG.scoresCsvUrl), fetchCsv(CONFIG.locationsCsvUrl)]);
+    } catch (err){
+      const d = demoData(); scores = d.scores; locations = d.locations; isDemo = true;
+      banner(`<b>Couldn't load the sheet</b> (${err.message}). Check that both tabs are published to the web as CSV, and that you're viewing this page over http rather than opening the file directly. Showing sample data below.`);
+    }
+  } else {
+    const d = demoData(); scores = d.scores; locations = d.locations; isDemo = true;
+    banner(`<b>Sample data.</b> Open this file and paste your two published CSV links into <code>CONFIG</code> at the top of the script to switch to real scores.`);
+  }
+  const M = buildModel(scores, locations);
+  assignColors(M.players);
+  renderMeta(M); renderStandings(M); renderToday(M); renderHeat(M); renderTrack(M);
+  const unmapped = M.regions.find(r => r.region === "Unmapped");
+  if (unmapped && !isDemo){
+    document.getElementById("banner").insertAdjacentHTML("beforeend",
+      `<div class="banner"><b>${unmapped.n} locations aren't mapped to a region.</b> Check the country spellings in your locations sheet, add the country to <code>REGION_MEMBERS</code>, or fill in the <code>region</code> column directly.</div>`);
+  }
+})();
+</script>
+</body>
+</html>
